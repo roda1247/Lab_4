@@ -1,3 +1,13 @@
+---
+title: "Lab 4: Importing NOAA buoy Data from Monterey Bay"
+author: "Bianca Rodas"
+output: html_document
+code-tools: true
+embed-resources: true
+echo: true
+---
+
+
 # Part 1: Setup
 
 ## GitHub Workflow
@@ -38,7 +48,7 @@ In the code chunk below, load in the packages necessary for your analysis. You s
 
 ```{r}
 #| label: setup
-
+library("tidyverse")
 ```
 
 # Part 2: Data Context
@@ -68,7 +78,7 @@ When you read in the data give it an appropriate name for what the data represen
 
 ```{r}
 #| label: load-data
-
+buoy_2024 <- read_table("data-raw/buoy_2024.txt")
 ```
 
 Notice that the data is all read in as a character value and the first row contains information that is not data, but additional information about the variables: this is called a "comment" in the data.  
@@ -78,7 +88,7 @@ In your data, you will notice the `#` in front of `yr` in the second row. That i
 
 ```{r}
 #| label: load-data-comment
-
+buoy_2024 <- buoy_2024[-1,]
 ```
 
 
@@ -87,7 +97,11 @@ We want to use snake_case for our variable names. Use the `janitor` package to c
 
 ```{r}
 #| label: clean-names
+library("janitor")
+library("readr")
 
+buoy_2024 <- buoy_2024 |> 
+  clean_names()
 ```
 
 ## Step 4: Write the Data Part 1
@@ -98,6 +112,7 @@ Write the data to a `csv` file called `buoy_update.csv`. Be sure to write it to 
 ```{r}
 #| label: write-data-part-1
 
+write.csv(buoy_2024, file="data-raw/buoy_update.csv")
 ```
 
 
@@ -112,7 +127,9 @@ Remember that now we are reading back in a data file of type `csv`. Now when you
 
 ```{r}
 #| label: load-data-again
-
+buoy_update <- read_csv("data-raw/buoy_update.csv",
+                        col_types = cols(.default = "c"),
+                        na = c("99", "999", "99.0", "99.00", "999.0", "999.00"))
 ```
 
 This is great! But we created another problem. Now all of our numeric values are being treated like characters and we don't want that. There are a couple of ways to fix this. We can write and reread in the data setting the column types to `double` or we can use the `readr` parsing functions. 
@@ -121,7 +138,7 @@ Here is the code you can use to fix the data without exporting and importing aga
 
 ```{r}
 #| label: parse-double
-buoy_final <- your_file_name |> 
+buoy_final <- buoy_update |> 
   mutate(across(.cols = everything(), ~parse_double(.x)))
 ```
 
@@ -129,13 +146,37 @@ buoy_final <- your_file_name |>
 
 Now we have our clean, correctly classified, data ready for analysis as `buoy_final`. Go ahead and write that data as a `csv` file into your `data-clean` file. Once you've done that. Set the data cleaning code chunks to `eval: false` so that you do not rerun them again when you render the document. 
 
+```{r}
+#| label: write-final-data
+#| eval: false
+write.csv(buoy_update, file= "data-clean/buoy_final")
+```
+
 
 # Part 3: Recreate the Following Visualization
 Now that are data is "analytic ready", go ahead and read in your clean data and use it to try and recreate the following visualization. Do your best to match the following visualization as close as possible. (Hint: when specifying color, you may need to use `factor()` to get R to treat a continuous value as discrete).  
 
 ```{r}
 #| label: monterey-air-temp-viz
+buoy_final <- read_csv("data-clean/buoy_final")
 
+library(ggplot2)
+
+ggplot(buoy_final) + 
+  geom_jitter(aes(x=mm, y=atmp, color=factor(mm)),
+              show.legend=F,#used chat gbt to take off the legend
+              width=0.1,
+              alpha=0.2)+
+  labs(title="Monterey Bay Canyon Air Tempurature in 2024",
+       x="Month in 2024",
+       y="Air Temperature (Celsius)",
+       caption ="Source: NOAA National Data Buoy Center")+
+  geom_smooth(aes(x=mm, y=atmp, group=1), 
+              method = "gam", color = "black")+ #I used chatgbt to look for different methods, and found Generalized Additive Model (gam) for a more "complex" line
+  theme_bw()+
+  scale_color_viridis_d()
+  
+  
 
 ```
 
@@ -154,8 +195,12 @@ One fun source for data is [Tidy Tuesday](https://github.com/rfordatascience/tid
 
 >Insert your description and link to your source here. Identify 2-3 research questions you could try to answer with this data.  
 
-
-
+>link: https://github.com/rfordatascience/tidytuesday/blob/main/data/2021/2021-01-26/readme.md  
+>Description: The dataset is gathered through organized plastic waste audits and clean-up events on a global scale. This dataset holds recorrd of the date, location, brand name, types of plastic, and quantity. 
+>Questions:
+1.How does branded plastics compare to unbranded plastics collected?  
+2.Which brands were most associated with the plastic found?  
+3.Which plastics types were more commonly found? Which is the least?
 
 # Lab 4 Submission
 
